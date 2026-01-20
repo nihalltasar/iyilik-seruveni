@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dünya Kahramanları: İyilik Serüveni</title>
+    <!-- Kütüphaneler -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #f0f9ff; overflow-x: hidden; }
+        .badge-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .hero-gradient { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); }
+        .intro-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+        .virtue-crystal { transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .card-pop { animation: pop 0.4s ease-out; }
+        @keyframes pop { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .speech-bubble { position: relative; background: #ffffff; border-radius: 2rem; border: 3px solid #e0f2fe; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Firebase Başlatma
+        const firebaseConfig = JSON.parse(__firebase_config);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'iyilik-seruveni-pro';
+
+        const Icon = ({ name, size = 24, color = "currentColor", fill = "none", className = "" }) => {
+            const icons = {
+                heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
+                shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />,
+                leaf: <React.Fragment><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C10.2 14.4 11.5 13 12 13"/></React.Fragment>,
+                star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
+                globe: <React.Fragment><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></React.Fragment>,
+                trophy: <React.Fragment><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></React.Fragment>,
+                brain: <React.Fragment><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04Z"/></React.Fragment>,
+                user: <React.Fragment><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></React.Fragment>,
+                checkCircle: <React.Fragment><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></React.Fragment>,
+                xCircle: <React.Fragment><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></React.Fragment>,
+                gem: <React.Fragment><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></React.Fragment>,
+                chevronRight: <path d="m9 18 6-6-6-6" />,
+                users: <React.Fragment><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></React.Fragment>,
+                settings: <React.Fragment><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></React.Fragment>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const BADGES = [
+            { id: 'starter', name: 'İlk Adım', threshold: 1, icon: 'star', color: 'text-amber-400' },
+            { id: 'halfway', name: 'Erdem Elçisi', threshold: 10, icon: 'heart', color: 'text-rose-500' },
+            { id: 'hero', name: 'Dünya Kahramanı', threshold: 20, icon: 'globe', color: 'text-emerald-500' },
+            { id: 'master', name: 'Efsanevi Mimar', threshold: 25, icon: 'trophy', color: 'text-sky-500' }
+        ];
+
+        const SCENARIOS = [
+            { id: 1, val: "Adalet", sk: "Eşitsizliklerin Azalması", info: "Adalet herkesin hak ettiğini almasıdır.", aura: "Adaletli davranarak sınıfımızın en güvenilir mimarı olabilirsin!", msg: "Parkta sıra beklerken birisi senin önüne geçmeye çalıştı.", opts: [{t: "Nazikçe sıramı beklediğimi söylerim.", e: true}, {t: "Ben de bir başkasının önüne geçerim.", e: false}] },
+            { id: 2, val: "Aile Bütünlüğü", sk: "Yoksulluğa Son", info: "Aile bağları birbirimize destek olduğumuzda güçlenir.", aura: "Ailene yardım etmek evinizi daha mutlu bir yer yapar!", msg: "Akşam yemeği hazırlanırken ailen senden yardım istedi.", opts: [{t: "Hemen masayı kurmaya yardım ederim.", e: true}, {t: "Ödevim var diyerek odama giderim.", e: false}] },
+            { id: 3, val: "Çalışkanlık", sk: "Açlığa Son", info: "Çalışkanlık, zorluklara rağmen emek vererek başarmaktır.", aura: "Emek vermek, hayallerine giden en sağlam yoldur!", msg: "Okul bahçesinde meyve yetiştirmek çok emek istiyor, yardım eder misin?", opts: [{t: "Her gün bıkmadan sular ve çapalarım.", e: true}, {t: "Yorulunca hemen bırakırım.", e: false}] },
+            { id: 4, val: "Dostluk", sk: "Barış ve Adalet", info: "Dostluk, barış köprülerini sevgiyle kurmaktır.", aura: "Dostlarının kalbini kırmadan sorunları çözebilirsin!", msg: "İki arkadaşın oyun yüzünden tartışıyor, ne yaparsın?", opts: [{t: "İkisini de dinleyip barıştırmaya çalışırım.", e: true}, {t: "Haklı olanın tarafını tutup diğerine küserim.", e: false}] },
+            { id: 5, val: "Duyarlılık", sk: "Temiz Su", info: "Duyarlılık, her türlü israfı fark edip harekete geçmektir.", aura: "Dünyadaki her damla su çok kıymetli, onu koruyalım!", msg: "Okul lavabosunda bir musluğun açık bırakıldığını gördün.", opts: [{t: "Hemen kapatır ve israfı önlerim.", e: true}, {t: "Ben açmadım diyerek geçer giderim.", e: false}] },
+            { id: 6, val: "Dürüstlük", sk: "Barış", info: "Dürüstlük, hata yapsak bile gerçeği söyleme cesaretidir.", aura: "Dürüstlük, karakterinin en parlak yıldızıdır!", msg: "Yanlışlıkla arkadaşının kalemini kırdın ama kimse görmedi.", opts: [{t: "Hemen arkadaşıma söyler ve özür dilerim.", e: true}, {t: "Kalemi çantasına gizlice bırakırım.", e: false}] },
+            { id: 7, val: "Estetik", sk: "Karasal Yaşam", info: "Estetik, doğanın güzelliğini koruyarak çevreye değer katmaktır.", aura: "Şehrini renkli çiçeklerle süsleyerek herkesi mutlu edebilirsin!", msg: "Şehrimize yeni bir çocuk parkı yapılacak. Beton mu olsun çiçekler mi?", opts: [{t: "Ağaçların ve çiçeklerin çok olduğu bir tasarım olsun.", e: true}, {t: "Sadece beton ve demir oyuncaklar olsun.", e: false}] },
+            { id: 8, val: "Mahremiyet", sk: "Eşitsizlikler", info: "Mahremiyet, başkalarının sınırlarına ve özel hayatına saygı duymaktır.", aura: "Başkalarının özeline saygı duymak seni gerçek bir kahraman yapar!", msg: "Arkadaşının özel bir not defterini masada açık gördün.", opts: [{t: "Okumadan hemen kapatır ve ona veririm.", e: true}, {t: "Merak edip içinde ne yazdığına bakarım.", e: false}] },
+            { id: 9, val: "Merhamet", sk: "Açlığa Son", info: "Merhamet, yardıma muhtaç her canlıya sevgiyle yaklaşmaktır.", aura: "Merhametli bir kalp, tüm dünyayı iyileştirir!", msg: "Yolda karnı çok acıkmış ve üşümüş bir kedi gördün.", opts: [{t: "Mama verir veya su koyarım.", e: true}, {t: "Korkup hemen uzaklaşırım.", e: false}] },
+            { id: 10, val: "Mütevazılık", sk: "Eşitsizlikler", info: "Mütevazılık, başarırken de herkesin değerli olduğunu unutmamaktır.", aura: "Başarılarını mütevazılıkla paylaşman seni daha çok sevdirir!", msg: "Sınavdan en yüksek notu aldın ve herkes seni alkışlıyor.", opts: [{t: "Çok çalıştığımı ama herkesin başarabileceğini söylerim.", e: true}, {t: "En zeki benim diye bağırırım.", e: false}] },
+            { id: 11, val: "Özgürlük", sk: "Barış", info: "Özgürlük, herkesin tercihlerini özgürce yapabilme hakkına saygı duymaktır.", aura: "Herkesin özgürce fikir söylemesi dünyayı daha renkli yapar!", msg: "Sınıfta herkes aynı oyunu oynamak zorunda bırakılıyor.", opts: [{t: "Herkesin kendi oyununu seçme hakkını savunurum.", e: true}, {t: "Sessizce çoğunluğun fikrine uyarım.", e: false}] },
+            { id: 12, val: "Sabır", sk: "İklim Eylemi", info: "Sabır, güzel bir gelecek için sabırla emek vermektir.", aura: "Sabırla beklenen her emek, en tatlı meyvesini verir!", msg: "Diktiğin fidanın meyve vermesi için çok uzun süre beklemen gerekiyor.", opts: [{t: "Her gün sular ve büyümesini beklerim.", e: true}, {t: "Hemen büyümediği için sulamayı bırakırım.", e: false}] },
+            { id: 13, val: "Sağlıklı Yaşam", sk: "Sağlıklı Yaşam", info: "Sağlıklı yaşam, vücudumuzu korumak için doğru seçimler yapmaktır.", aura: "Vücudun senin kalemindir, ona sağlıklı yiyeceklerle bak!", msg: "Okul kantininde meyve mi asitli içecek mi istersin?", opts: [{t: "Vücudumu korumak için taze meyveyi seçerim.", e: true}, {t: "Zararlı ama tadı güzel olanı alırım.", e: false}] },
+            { id: 14, val: "Saygı", sk: "Eşitsizlikler", info: "Saygı, farklılıklara değer vermek ve nazik davranmaktır.", aura: "Saygı göstermek, farklılıkların güzelliğini keşfetmektir!", msg: "Sınıfa yeni gelen yabancı arkadaşın sessizce tek başına oturuyor.", opts: [{t: "Yanına gider, gülümser ve oyunuma davet ederim.", e: true}, {t: "Kendi arkadaşlarımla kalıp onu izlerim.", e: false}] },
+            { id: 15, val: "Sevgi", sk: "Karasal Yaşam", info: "Sevgi, doğayı ve tüm canlıları koruma isteğidir.", aura: "Doğayı sevmek, dünyayı kalbinle kucaklamaktır!", msg: "Bahçedeki ağacın dallarını bilerek kıran birini gördün.", opts: [{t: "Doğayı sevdiğim için onu nazikçe durdururum.", e: true}, {t: "Bana ne diyerek oynamaya devam ederim.", e: false}] },
+            { id: 16, val: "Sorumluluk", sk: "Temiz Su", info: "Sorumluluk, üzerimize düşen görevleri yaparak dünyayı korumaktır.", aura: "Küçük sorumluluklar büyük farklar yaratır, hadi katıl!", msg: "Su israfını önlemek için bir kampanya başlatıldı, katılır mısın?", opts: [{t: "Gönüllü olup arkadaşlarıma önemini anlatırım.", e: true}, {t: "Bu tür işlerle yorulmak istemem.", e: false}] },
+            { id: 17, val: "Tasarruf", sk: "İklim Eylemi", info: "Tasarruf, kaynakları verimli kullanarak israfta bulunmamaktır.", aura: "Tasarruflu bir mimar, geleceğin enerjisini korur!", msg: "Defterinin yarısı boşken sadece süslü diye yenisini istiyorsun.", opts: [{t: "Kağıt israfını önlemek için eski defterimi bitiririm.", e: true}, {t: "Hemen yenisini alıp eskiyi çöpe atarım.", e: false}] },
+            { id: 18, val: "Temizlik", sk: "Karasal Yaşam", info: "Temizlik, çevreyi temiz tutarak yaşama saygı göstermektir.", aura: "Pırıl pırıl bir çevre, tüm canlılar için sağlık demektir!", msg: "Piknikten sonra her yerin çöp içinde kaldığını gördün.", opts: [{t: "Hemen poşetimi çıkarır ve her yeri temizlerim.", e: true}, {t: "Belediye temizler diyerek eve giderim.", e: false}] },
+            { id: 19, val: "Vatanseverlik", sk: "Barış", info: "Vatanseverlik, tarihimize ve mirasımıza sahip çıkmaktır.", aura: "Tarihimizi korumak, vatanımıza olan sevgimizi gösterir!", msg: "Tarihi bir kalenin üzerine yazı yazanları gördün.", opts: [{t: "Mirasımızı korumak için onları nazikçe uyarırım.", e: true}, {t: "Ben de ismimi yazar anı bırakırım.", e: false}] },
+            { id: 20, val: "Yardımseverlik", sk: "Yoksulluğa Son", info: "Yardımseverlik, paylaşmanın verdiği mutluluğu hissetmektir.", aura: "Yardımsever eller dünyayı daha sıcak bir yer yapar!", msg: "Okulda ihtiyacı olan çocuklar için bir kermes düzenleniyor.", opts: [{t: "En sevdiğim oyuncağımı bağışlarım.", e: true}, {t: "Sadece kendime bir şeyler almaya giderim.", e: false}] },
+            { id: 21, val: "Adalet", sk: "Eşitsizlikler", info: "Adalet, herkesi oyunun ve hayatın bir parçası yapabilmektir.", aura: "Adalet terazisi senin ellerinde, herkese eşit davran!", msg: "Takım oyununda zayıf olan arkadaşını kimse takıma almıyor.", opts: [{t: "Onu kendi takımıma davet eder, moral veririm.", e: true}, {t: "Güçlü bir takım kurup kazanmaya odaklanırım.", e: false}] },
+            { id: 22, val: "Dürüstlük", sk: "Barış ve Adalet", info: "Dürüstlük, her şartta doğruluğu savunmaktır.", aura: "Doğru yoldan ayrılmayan mimar, sarsılmaz bir dünya kurar!", msg: "Öğretmenin ödevi kontrol ederken senin yapmadığını fark etmedi.", opts: [{t: "Öğretmenime dürüstçe yapamadığımı söylerim.", e: true}, {t: "Sessiz kalıp bedavadan artı puan alırım.", e: false}] },
+            { id: 23, val: "Çalışkanlık", sk: "Açlığa Son", info: "Çalışkanlık, emeğin karşılığını sabırla beklemektir.", aura: "Çalışkan eller yorulsa da kalpler hep huzurla dolar!", msg: "Bahçede domates yetiştirmek için her gün çalışmak gerekiyor.", opts: [{t: "Güneşin altında olsa bile suyunu veririm.", e: true}, {t: "Çok sıcak, bugünlük kalsın derim.", e: false}] },
+            { id: 24, val: "Duyarlılık", sk: "Temiz Su", info: "Duyarlılık, doğanın sesini duyup ona cevap vermektir.", aura: "Mavi suların koruyucusu olmaya hazır mısın?", msg: "Deniz kıyısında plastik şişelerin yüzdüğünü fark ettin.", opts: [{t: "Arkadaşlarımla toplayıp geri dönüşüme atarız.", e: true}, {t: "Deniz zaten kirli diyerek yüzerim.", e: false}] },
+            { id: 25, val: "Sağlıklı Yaşam", sk: "Sağlık", info: "Sağlıklı yaşam, teknolojiyi dengeli kullanıp dinlenmektir.", aura: "Sağlığın yerindeyse dünyayı kurtarmak çok daha eğlenceli!", msg: "Geç saatlere kadar tabletle oynamak istiyorsun.", opts: [{t: "Uykumu ve gözlerimi korumak için vaktinde kapatırım.", e: true}, {t: "Uykum gelene kadar oynamaya devam ederim.", e: false}] },
+            { id: 26, val: "Tasarruf", sk: "İklim Eylemi", info: "Tasarruf, enerji kaynaklarını geleceğe taşımaktır.", aura: "Işıkları kapatarak dünyamızın geleceğini aydınlatabilirsin!", msg: "Sınıftan çıkarken lambaların açık kaldığını gördün.", opts: [{t: "Hemen kapatır ve israfı önlerim.", e: true}, {t: "Nöbetçi öğrenci kapatsın derim.", e: false}] },
+            { id: 27, val: "Hoşgörü", sk: "Barış", info: "Hoşgörü, farklılıklara rağmen birlikte yaşama sanatıdır.", aura: "Hoşgörü ile bakarsan dünyadaki tüm kapılar sana açılır!", msg: "Arkadaşın seninle farklı bir dilde konuşurken kelimeleri karıştırıyor.", opts: [{t: "Onu anlamaya çalışır ve sabırla gülümserim.", e: true}, {t: "Komik konuştuğu için onunla dalga geçerim.", e: false}] },
+            { id: 28, val: "Sevgi", sk: "Karasal Yaşam", info: "Sevgi, yardıma muhtaç her canlıya el uzatmaktır.", aura: "Hayvan dostlarımıza yardım etmek seni büyük bir kahraman yapar!", msg: "Fırtınada yuvasından düşmüş yavru bir kuş buldun.", opts: [{t: "Güvenli bir kutuya koyar ve yardım isterim.", e: true}, {t: "Vaktim yok diyerek bırakırım.", e: false}] },
+            { id: 29, val: "Yardımseverlik", sk: "Yoksulluk", info: "Yardımseverlik, toplumsal dayanışma ile güçlenmektir.", aura: "Paylaştığın her kuruş, bir başkasının umudu olur!", msg: "Okul kumbarasına harçlığının bir kısmını atmak ister misin?", opts: [{t: "İhtiyacı olanlar için seve seve paylaşırım.", e: true}, {t: "Hepsini kendime saklayıp oyuncak alırım.", e: false}] },
+            { id: 30, val: "Vizyonerlik", sk: "SKA Elçisi", info: "Vizyonerlik, erdemlerle daha adil ve yeşil bir dünya inşa etmektir.", aura: "Sen geleceğin mimarısın, erdemlerin senin en güçlü temelindir!", msg: "Serüvenin sonu! Her zaman bir dünya kahramanı olmaya hazır mısın?", opts: [{t: "Erdemlerime her zaman sahip çıkacak ve dünyayı koruyacağım!", e: true}, {t: "Büyüyünce düşünürüm.", e: false}] }
+        ];
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [profile, setProfile] = useState(null);
+            const [view, setView] = useState('login');
+            const [allStudents, setAllStudents] = useState([]);
+            const [loginName, setLoginName] = useState('');
+            const [feedback, setFeedback] = useState(null);
+
+            // Auth listener ve veri çekme
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
+                    } catch (e) { console.error("Auth error:", e); }
+                };
+                initAuth();
+                const unsubscribe = auth.onAuthStateChanged((u) => {
+                    setUser(u);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // Profil verisi çekme
+            useEffect(() => {
+                if (!user) return;
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('students').doc(user.uid);
+                docRef.get().then(docSnap => {
+                    if (docSnap.exists) {
+                        setProfile(docSnap.data());
+                        setView('game');
+                    }
+                }).catch(err => console.error("Data fetch error:", err));
+            }, [user]);
+
+            // Öğretmen paneli verisi
+            useEffect(() => {
+                if (view === 'teacher' && user) {
+                    const unsub = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('students')
+                        .onSnapshot((snap) => {
+                            setAllStudents(snap.docs.map(d => d.data()));
+                        }, (err) => console.error("Teacher snapshot error:", err));
+                    return () => unsub();
+                }
+            }, [view, user]);
+
+            const handleLogin = async () => {
+                if (!loginName.trim() || !user) return;
+                const newProfile = { uid: user.uid, name: loginName, correctCount: 0, completedCount: 0, badges: [], lastActive: new Date().toISOString() };
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('students').doc(user.uid).set(newProfile);
+                setProfile(newProfile);
+                setView('game');
+            };
+
+            const handleChoice = async (option) => {
+                if (!profile || !user || feedback) return;
+                const scenario = SCENARIOS[profile.completedCount];
+                const isCorrect = option.e;
+                const newCorrectCount = isCorrect ? (profile.correctCount || 0) + 1 : (profile.correctCount || 0);
+                
+                let newBadges = [...profile.badges];
+                if (newCorrectCount >= 1 && !newBadges.includes('starter')) newBadges.push('starter');
+                if (newCorrectCount >= 10 && !newBadges.includes('halfway')) newBadges.push('halfway');
+                if (newCorrectCount >= 20 && !newBadges.includes('hero')) newBadges.push('hero');
+                if (newCorrectCount >= 25 && !newBadges.includes('master')) newBadges.push('master');
+
+                setFeedback({ 
+                    status: isCorrect ? 'success' : 'error', 
+                    msg: isCorrect ? "Harika Karar!" : "Yeni Bir Şey Öğreniyoruz!", 
+                    detail: isCorrect ? "" : `Küçük bir hata ama üzülme, birlikte doğrusunu fark edelim: "${scenario.opts.find(o => o.e).t}"`, 
+                    info: scenario.info, 
+                    tempCorrectCount: newCorrectCount, 
+                    tempBadges: newBadges 
+                });
+            };
+
+            const handleNextTask = async () => {
+                if (!profile || !user || !feedback) return;
+                const updateData = { correctCount: feedback.tempCorrectCount, completedCount: profile.completedCount + 1, badges: feedback.tempBadges, lastActive: new Date().toISOString() };
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('students').doc(user.uid).update(updateData);
+                setProfile(prev => ({ ...prev, ...updateData }));
+                setFeedback(null);
+            };
+
+            const currentOptions = useMemo(() => {
+                if (!profile || profile.completedCount >= SCENARIOS.length) return [];
+                return [...SCENARIOS[profile.completedCount].opts].sort(() => Math.random() - 0.5);
+            }, [profile?.completedCount]);
+
+            if (view === 'login' && !profile) return (
+                <div className="flex h-screen items-center justify-center p-6 hero-gradient relative overflow-hidden">
+                    <div className="bg-white/95 backdrop-blur p-12 rounded-[4rem] shadow-2xl border-4 border-white max-w-lg w-full text-center intro-float relative z-10 intro-card-gradient">
+                        <Icon name="gem" size={60} className="text-sky-500 mx-auto mb-8" fill="#0ea5e9" />
+                        <h1 className="text-3xl font-black text-sky-900 mb-6 leading-tight uppercase">Hoş Geldin Küçük Mimar!</h1>
+                        <p className="text-slate-600 mb-12 font-bold leading-relaxed text-lg italic">Dünyamızın sana ihtiyacı var! <b>30 Erdem Kristalini</b> toplayarak yoksulluğu yenebilir, suları koruyabilir ve barış dolu bir dünya kurabilirsin.</p>
+                        <div className="space-y-4">
+                            <input type="text" placeholder="Adını Yaz Mimar" className="w-full p-6 rounded-3xl border-4 border-sky-100 mb-4 focus:border-sky-400 font-black text-center outline-none text-xl" value={loginName} onChange={(e) => setLoginName(e.target.value)} />
+                            <button onClick={handleLogin} className="w-full py-6 bg-orange-500 text-white font-black rounded-[2.5rem] hover:bg-orange-600 shadow-xl border-b-8 border-orange-700 active:scale-95 transition-all text-2xl uppercase">MACERAYA ATIL!</button>
+                        </div>
+                        <button onClick={() => setView('teacher')} className="mt-10 text-[11px] font-black text-slate-300 hover:text-sky-500 transition uppercase tracking-widest flex items-center justify-center gap-2 mx-auto"><Icon name="settings" size={16} /> ÖĞRETMEN PANELİ</button>
+                    </div>
+                </div>
+            );
+
+            if (view === 'teacher') return (
+                <div className="max-w-6xl w-full mx-auto p-4 md:p-8 animate-in fade-in">
+                    <div className="bg-white rounded-[3rem] shadow-2xl p-10 border-4 border-indigo-100">
+                        <div className="flex justify-between items-center mb-10">
+                            <h2 className="text-3xl font-black text-indigo-950 uppercase flex items-center gap-4"><Icon name="users" className="text-indigo-500" size={32} /> Sınıf Kahramanları</h2>
+                            <button onClick={() => setView('login')} className="p-4 rounded-2xl bg-slate-100 text-slate-500 hover:bg-rose-100 transition"><Icon name="chevronRight" className="rotate-180" size={24} /></button>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="border-b-4 border-slate-50">
+                                    <tr className="text-slate-400 font-black text-[12px] uppercase tracking-widest">
+                                        <th className="pb-6 px-6">Kahraman</th><th className="pb-6 px-6 text-center">Doğru</th><th className="pb-6 px-6 text-center">İlerleme</th><th className="pb-6 px-6">Rozetler</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {allStudents.sort((a, b) => (b.correctCount || 0) - (a.correctCount || 0)).map(s => (
+                                        <tr key={s.uid} className="hover:bg-slate-50/80 transition cursor-default">
+                                            <td className="py-6 px-6 font-black text-slate-800 uppercase leading-none">{s.name}</td>
+                                            <td className="py-6 px-6 text-sky-500 font-black text-center text-lg">{s.correctCount || 0}/30</td>
+                                            <td className="py-6 px-6">
+                                                <div className="w-32 bg-slate-100 h-3 rounded-full overflow-hidden border mx-auto">
+                                                    <div className="bg-sky-500 h-full transition-all duration-500" style={{width: `${(s.completedCount/30)*100}%`}}></div>
+                                                </div>
+                                            </td>
+                                            <td className="py-6 px-6 flex gap-1 justify-center">
+                                                {s.badges.map(b => (
+                                                    <div key={b} className="bg-white shadow-sm p-1.5 rounded-lg border border-sky-50"><Icon name={BADGES.find(x => x.id === b)?.icon || 'star'} size={14} className="text-indigo-400" /></div>
+                                                ))}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (view === 'loading') return <div className="flex h-screen items-center justify-center"><Icon name="globe" className="animate-spin text-sky-500" size={64} /></div>;
+
+            const current = SCENARIOS[profile.completedCount];
+            const displayCount = feedback ? feedback.tempCorrectCount : (profile.correctCount || 0);
+
+            return (
+                <div className="max-w-2xl w-full mx-auto p-4 animate-in fade-in">
+                    <header className="bg-white p-6 rounded-[2.5rem] shadow-xl border-4 border-sky-100 mb-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-sky-500 rounded-2xl text-white shadow-lg"><Icon name="user" size={24} /></div>
+                                <span className="font-black text-sky-950 text-xl leading-none uppercase">{profile.name}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Erdem Kutucuğu</span>
+                                <div className="flex gap-2 items-center bg-sky-50 p-2 rounded-2xl border-2 border-sky-100 shadow-inner">
+                                    <Icon name="gem" size={20} className="text-yellow-500" fill="#eab308" />
+                                    <span className="font-black text-sky-600 text-xl leading-none">{displayCount}</span>
+                                    <div className="w-24 bg-slate-200 h-4 rounded-full overflow-hidden ml-1 border border-white">
+                                        <div className="bg-yellow-400 h-full virtue-crystal" style={{width: `${(displayCount/30)*100}%`}}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                            {BADGES.map(b => {
+                                const owned = (feedback ? feedback.tempBadges : profile.badges).includes(b.id);
+                                return (
+                                    <div key={b.id} className={`flex-shrink-0 p-4 rounded-3xl border-2 transition-all ${owned ? 'bg-sky-50 border-sky-300 shadow-md badge-pulse' : 'bg-slate-50 border-slate-100 opacity-30 grayscale'}`}>
+                                        <Icon name={b.icon} size={28} className={owned ? b.color : 'text-slate-300'} fill={owned ? 'currentColor' : 'none'} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </header>
+
+                    {profile.completedCount < 30 ? (
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-[3.5rem] shadow-2xl overflow-hidden border-4 border-white card-pop">
+                                <div className="bg-sky-500 p-10 text-white text-center relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-white" style={{backgroundImage: 'radial-gradient(circle, #fff 10%, transparent 10%)', backgroundSize: '20px 20px'}}></div>
+                                    <span className="bg-white/20 px-5 py-2 rounded-full text-[12px] font-black uppercase mb-3 inline-block tracking-widest relative z-10">KAHRAMAN GÖREVİ {profile.completedCount + 1}/30</span>
+                                    <h2 className="text-3xl font-black relative z-10 drop-shadow-md leading-tight">{current.val} Kristali</h2>
+                                    <p className="text-sky-100 text-[11px] font-bold uppercase mt-1 tracking-widest relative z-10">{current.sk}</p>
+                                </div>
+                                <div className="p-10">
+                                    <div className="flex gap-6 mb-12 items-center">
+                                        <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-50 flex items-center justify-center flex-shrink-0 border-4 border-white shadow-xl">
+                                            <Icon name="brain" className="text-indigo-500" size={44} />
+                                        </div>
+                                        <div className="speech-bubble p-8 border-2 border-sky-50 shadow-sm flex-1">
+                                            <p className="text-xl font-bold text-sky-900 leading-relaxed italic text-center">"{current.msg}"</p>
+                                        </div>
+                                    </div>
+                                    
+                                    {!feedback ? (
+                                        <div className="space-y-4">
+                                            {currentOptions.map((o, i) => (
+                                                <button key={i} onClick={() => handleChoice(o)} className="w-full text-left p-6 rounded-[2.5rem] border-4 border-slate-50 hover:border-sky-400 hover:bg-sky-50 transition-all font-black text-slate-700 shadow-sm flex justify-between items-center group text-lg leading-snug">
+                                                    {o.t} <Icon name="chevronRight" size={24} className="text-slate-200 group-hover:text-sky-500" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className={`p-10 rounded-[3.5rem] text-center border-8 animate-in zoom-in duration-300 ${feedback.status === 'success' ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                                            <div className={`bg-white w-20 h-20 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-xl border-4 ${feedback.status === 'success' ? 'text-emerald-500 border-emerald-50' : 'text-rose-500 border-rose-50'}`}>
+                                                <Icon name={feedback.status === 'success' ? "checkCircle" : "xCircle"} size={54} />
+                                            </div>
+                                            <h3 className={`font-black text-2xl mb-4 ${feedback.status === 'success' ? 'text-emerald-900' : 'text-rose-900'}`}>{feedback.msg}</h3>
+                                            {feedback.detail && <p className="font-bold text-rose-800 mb-6 text-base leading-relaxed bg-white/50 p-5 rounded-3xl">{feedback.detail}</p>}
+                                            <div className="bg-white/80 p-6 rounded-3xl mb-8 border-2 border-white shadow-inner">
+                                                <p className="text-slate-600 font-black italic text-lg leading-relaxed uppercase tracking-tighter text-center">"{feedback.info}"</p>
+                                            </div>
+                                            <button onClick={handleNextTask} className={`w-full py-5 text-white font-black rounded-[2rem] border-b-8 active:scale-95 transition-all text-xl uppercase shadow-lg ${feedback.status === 'success' ? 'bg-emerald-500 border-emerald-700 shadow-emerald-200' : 'bg-rose-500 border-rose-700 shadow-rose-200'}`}>SIRADAKİ GÖREV</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Gelişim Rehberi AURA (Sabitlendi) */}
+                            <div className="bg-indigo-900 p-6 rounded-[3rem] text-white flex gap-6 items-center border-4 border-indigo-800 shadow-2xl relative overflow-hidden">
+                                <div className="bg-indigo-400 p-4 rounded-3xl animate-bounce flex-shrink-0 shadow-lg border-2 border-indigo-300">
+                                    <Icon name="brain" className="text-white" size={36} />
+                                </div>
+                                <div className="text-sm">
+                                    <span className="font-black text-indigo-300 uppercase block mb-1 tracking-widest text-[12px]">AURA | Gelişim Rehberi</span>
+                                    <p className="font-bold text-slate-200 italic leading-snug">"{current.aura}"</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white p-16 rounded-[4rem] shadow-2xl text-center border-8 border-sky-100 card-pop relative overflow-hidden text-sky-950">
+                            <Icon name="trophy" size={120} className="text-yellow-400 mx-auto mb-8 animate-bounce" fill="#fbbf24" />
+                            
+                            {profile.correctCount >= 25 ? (
+                                <React.Fragment>
+                                    <h2 className="text-5xl font-black mb-6 uppercase tracking-tighter">EFSANEVİ MİMAR!</h2>
+                                    <p className="text-slate-500 mb-12 font-bold text-xl leading-relaxed italic text-center px-4">Tebrikler Efsanevi Mimar! Kusursuz bir dünya kurdun ve tüm kristalleri en parlak haline getirdin! Sen geleceğimizin en parlak yıldızısın.</p>
+                                </React.Fragment>
+                            ) : profile.correctCount >= 20 ? (
+                                <React.Fragment>
+                                    <h2 className="text-4xl font-black text-emerald-600 mb-6 uppercase tracking-tighter">DÜNYA KAHRAMANI!</h2>
+                                    <p className="text-slate-500 mb-12 font-bold text-xl leading-relaxed italic text-center px-4">Sen gerçek bir Dünya Kahramanısın! Dünyamızı korumak için attığın her adım çok değerliydi. Doğa ve insanlar sana minnettar.</p>
+                                </React.Fragment>
+                            ) : profile.correctCount >= 10 ? (
+                                <React.Fragment>
+                                    <h2 className="text-4xl font-black text-orange-500 mb-6 uppercase tracking-tighter">ERDEM ELÇİSİ!</h2>
+                                    <p className="text-slate-500 mb-12 font-bold text-xl leading-relaxed italic text-center px-4">Harika bir Erdem Elçisi oldun! İyilik yolunda çok güzel adımlar attın. Biraz daha pratikle efsanevi bir mimar olabilirsin.</p>
+                                </React.Fragment>
+                            ) : (
+                                <React.Fragment>
+                                    <h2 className="text-4xl font-black text-amber-500 mb-6 uppercase tracking-tighter leading-none">İLK ADIM BAŞARISI!</h2>
+                                    <p className="text-slate-500 mb-12 font-bold text-xl leading-relaxed italic text-center px-4">Serüveni tamamlayarak harika bir başlangıç yaptın! Erdem kristallerini daha fazla parlatmak için yeniden denemek ister misin?</p>
+                                </React.Fragment>
+                            )}
+
+                            <div className="bg-sky-50 p-10 rounded-[3.5rem] mb-12 border-4 border-sky-100 shadow-inner">
+                                <p className="text-slate-400 font-black uppercase text-[12px] mb-2 tracking-[0.3em]">Kahramanlık Karnesi</p>
+                                <div className="flex items-center justify-center gap-3">
+                                    <Icon name="gem" className="text-yellow-500" fill="#eab308" size={40} />
+                                    <p className="text-5xl font-black text-sky-900">{profile.correctCount} / 30 DOĞRU</p>
+                                </div>
+                            </div>
+                            <button onClick={() => location.reload()} className="w-full py-6 hero-gradient text-white font-black rounded-[3rem] border-b-8 border-sky-700 uppercase tracking-widest shadow-2xl text-2xl">YENİDEN BAŞLA</button>
+                        </div>
+                    )}
+
+                    <footer className="mt-12 text-center pb-12 opacity-30 text-[10px] font-black uppercase tracking-[0.3em]">Dünya Kahramanları: İyilik Serüveni</footer>
+                    <button onClick={() => setView('teacher')} className="p-4 text-[11px] font-black text-slate-300 hover:text-indigo-400 uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 mx-auto"><Icon name="settings" size={18} /> ÖĞRETMEN MASASI</button>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
